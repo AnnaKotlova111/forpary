@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Одевалка</title>
+<style>
+  :root {
+    --panel-bg: rgba(255, 255, 255, 0.9);
+    --accent: #d98ca0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #2b2430;
+    font-family: 'Segoe UI', 'Trebuchet MS', Arial, sans-serif;
+    color: #4a3b45;
+  }
+
+  .page {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-image: url('фон_комната.png');
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+  }
+
+  /* --- Девочка --- */
+  .girl-wrap {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 2%;
+    padding-left: 10%;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  .girl-wrap img {
+    height: 92%;
+    width: auto;
+    max-width: 92%;
+    object-fit: contain;
+    transition: opacity 0.15s ease;
+  }
+
+  .girl-wrap img.fading {
+    opacity: 0;
+  }
+
+  /* --- Шкаф --- */
+  .wardrobe-wrap {
+    position: relative;
+    flex-shrink: 0;
+    height: 100%;
+    aspect-ratio: 1024 / 1536; /* пропорции картинки шкафа, без искажений */
+    margin-right: 1%;
+  }
+
+  .wardrobe-wrap > img.wardrobe-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .closet-grid {
+    position: absolute;
+    left: 23.5%;
+    right: 21.5%;
+    top: 6%;
+    bottom: 10.5%;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, 1fr);
+    gap: 2%;
+  }
+
+  .closet-item {
+    background: var(--panel-bg);
+    border: 3px solid transparent;
+    border-radius: 10px;
+    padding: 1.2%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  }
+
+  .closet-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .closet-item:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+  }
+
+  .closet-item.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(217,140,160,0.5);
+  }
+
+  .closet-item {
+    position: relative;
+  }
+
+  .issued-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #7a3b53;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    display: none;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+    pointer-events: none;
+  }
+
+  /* --- Панель уровня --- */
+  .level-panel {
+    position: absolute;
+    top: 3%;
+    left: 3%;
+    max-width: 17%;
+    background: rgba(255, 255, 255, 0.93);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+    z-index: 5;
+  }
+
+  .req-title {
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: #7a3b53;
+    font-size: 0.9rem;
+  }
+
+  .req-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #4a3b45;
+  }
+
+  .req-list.none {
+    list-style: none;
+    padding-left: 0;
+    font-style: italic;
+    color: #7a6b73;
+  }
+
+  .feedback {
+    margin-top: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    min-height: 1.3em;
+  }
+
+  .feedback.correct { color: #2e7d4f; }
+  .feedback.wrong { color: #b3413b; }
+
+  /* --- Навигация по уровням --- */
+  .level-nav {
+    position: absolute;
+    bottom: 3%;
+    left: 3%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    z-index: 5;
+  }
+
+  .level-nav button {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: background 0.15s ease;
+  }
+
+  .level-nav button:hover {
+    background: rgba(255,255,255,0.35);
+  }
+
+  /* --- Экран-заставка перед уровнем --- */
+  .intro-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 15, 20, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+
+  .intro-overlay.hidden {
+    display: none;
+  }
+
+  .intro-box {
+    background: #fff;
+    border-radius: 20px;
+    padding: 44px 50px;
+    max-width: 680px;
+    width: 92%;
+    box-shadow: 0 12px 34px rgba(0,0,0,0.4);
+    text-align: center;
+  }
+
+  .intro-text {
+    font-size: 1.25rem;
+    line-height: 1.55;
+    color: #3a2e35;
+    margin: 0 0 16px;
+  }
+
+  .intro-footnote {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: #8a7b83;
+    font-style: italic;
+    margin: 0 0 26px;
+  }
+
+  .intro-ok {
+    background: #7a3b53;
+    color: #fff;
+    border: none;
+    padding: 12px 40px;
+    border-radius: 24px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .intro-ok:hover {
+    background: #622f43;
+  }
+
+  /* --- Финальный экран --- */
+  .final-box {
+    text-align: left;
+  }
+
+  .final-box h2 {
+    font-size: 1.35rem;
+    margin: 0 0 18px;
+    color: #7a3b53;
+    text-align: center;
+  }
+
+  .final-list {
+    margin: 0 0 24px;
+    padding-left: 22px;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: #3a2e35;
+  }
+
+  .final-list li {
+    margin-bottom: 12px;
+  }
+
+  .final-list .law-ref {
+    display: block;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: #8a7b83;
+  }
+
+  .final-box .intro-ok {
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* --- Стартовый экран --- */
+  .start-box h1 {
+    font-size: 1.5rem;
+    margin: 0 0 16px;
+    color: #7a3b53;
+  }
+
+  .start-box .intro-text {
+    margin: 0 0 26px;
+  }
+
+  /* --- Мобильная адаптация (портретная ориентация) --- */
+  @media (orientation: portrait) {
+    .stage {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .girl-wrap {
+      flex: none;
+      width: 100%;
+      height: 45%;
+      padding-bottom: 0;
+    }
+
+    .girl-wrap img {
+      height: 96%;
+      max-width: 78%;
+    }
+
+    .wardrobe-wrap {
+      flex-shrink: 0;
+      width: auto;
+      height: 53%;
+      margin: 0;
+    }
+
+    .level-panel {
+      top: 1.5%;
+      left: 2%;
+      right: 2%;
+      max-width: none;
+      padding: 10px 14px;
+    }
+
+    .req-title {
+      font-size: 0.8rem;
+    }
+
+    .req-list {
+      font-size: 0.72rem;
+      padding-left: 16px;
+    }
+
+    .feedback {
+      font-size: 0.75rem;
+      margin-top: 6px;
+    }
+
+    .level-nav {
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 1.5%;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      gap: 8px;
+    }
+
+    .level-nav button {
+      width: 26px;
+      height: 26px;
+      font-size: 0.85rem;
+    }
+
+    .issued-badge {
+      font-size: 0.55rem;
+      padding: 2px 6px;
+      top: 4px;
+      right: 4px;
+    }
+
+    .intro-box {
+      padding: 22px 18px;
+      width: 92%;
+    }
+
+    .intro-text {
+      font-size: 0.92rem;
+    }
+
+    .intro-footnote {
+      font-size: 0.7rem;
+    }
+
+    .final-box h2 {
+      font-size: 1rem;
+    }
+
+    .final-list {
+      font-size: 0.8rem;
+      padding-left: 16px;
+    }
+
+    .final-list .law-ref {
+      font-size: 0.68rem;
+    }
+  }
+
+  @media (orientation: portrait) and (max-width: 420px) {
+    .req-title {
+      font-size: 0.72rem;
+    }
+
+    .req-list {
+      font-size: 0.66rem;
+    }
+
+    .level-nav span {
+      display: none;
+    }
+
+    .intro-text {
+      font-size: 0.85rem;
+    }
+  }
+
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="stage" id="stage">
+      <div class="level-panel">
+        <div class="req-title" id="reqTitle"></div>
+        <ul class="req-list" id="reqList"></ul>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <div class="level-nav">
+        <button id="prevLevel" title="Предыдущий уровень">←</button>
+        <span id="levelLabel">Уровень 1 из 3</span>
+        <button id="nextLevel" title="Следующий уровень">→</button>
+      </div>
+
+      <div class="intro-overlay" id="startOverlay">
+        <div class="intro-box start-box">
+          <h1>Одежда обучающихся: как это устроено по закону</h1>
+          <p class="intro-text">Короткая игра по статье 38 закона «Об образовании в РФ». Она объясняет, кто и как устанавливает требования к одежде в школах и училищах. Пройдите 4 уровня и соберите Соне подходящий образ на каждом.</p>
+          <button class="intro-ok" id="startBtn">Начать</button>
+        </div>
+      </div>
+
+      <div class="intro-overlay hidden" id="introOverlay">
+        <div class="intro-box">
+          <p class="intro-text" id="introText"></p>
+          <p class="intro-footnote" id="introFootnote"></p>
+          <button class="intro-ok" id="introOk">ОК</button>
+        </div>
+      </div>
+
+      <div class="intro-overlay hidden" id="finalOverlay">
+        <div class="intro-box final-box">
+          <h2>Как устроены требования к одежде в законе</h2>
+          <ul class="final-list">
+            <li>Школа может вовсе не устанавливать требования к одежде — тогда обучающиеся выбирают её сами.
+              <span class="law-ref">ч. 1 ст. 38 ФЗ «Об образовании в РФ»</span></li>
+            <li>Государственные и муниципальные школы устанавливают требования в соответствии с типовыми требованиями, которые утверждает регион.
+              <span class="law-ref">ч. 2 ст. 38 ФЗ «Об образовании в РФ»</span></li>
+            <li>Конкретные детали — цвет, фасон, знаки отличия — школа прописывает в своём локальном акте.
+              <span class="law-ref">ч. 1 ст. 38 ФЗ «Об образовании в РФ»</span></li>
+            <li>Для училищ и других федеральных организаций (оборона, безопасность, морская и лётная подготовка) образцы формы и нормы обеспечения обмундированием устанавливает их учредитель.
+              <span class="law-ref">ч. 4–5 ст. 38 ФЗ «Об образовании в РФ»</span></li>
+          </ul>
+          <button class="intro-ok" id="restartGame">Начать сначала</button>
+        </div>
+      </div>
+
+      <div class="girl-wrap">
+        <img id="girlImg" src="девочка_crop.png" alt="Девочка">
+      </div>
+
+      <div class="wardrobe-wrap">
+        <img class="wardrobe-img" src="шкаф.png" alt="Шкаф">
+        <div class="closet-grid" id="closetGrid"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const outfits = [
+    { id: 'casual',   name: 'Повседневный',   thumb: 'повседневное.png',            worn: 'девочка_в_повседневном.png' },
+    { id: 'business', name: 'Деловой',        thumb: 'деловой.png',                 worn: 'девочка_в_деловом.png' },
+    { id: 'sport',    name: 'Спортивный',     thumb: 'спортивный.png',              worn: 'девочка_в_спортивном.png' },
+    { id: 'formal',   name: 'Парадный',       thumb: 'парадное.png',                worn: 'девочка_в_парадном.png' },
+    { id: 'school',   name: 'Школьный',       thumb: 'школьное.png',                worn: 'девочка_в_школьном.png' },
+  ];
+
+  const levels = [
+    {
+      caption: 'Школа номер пять не устанавливала требования к одежде обучающихся. Одевайте Соню так, как считаете нужным.',
+      footnote: 'ч. 1 ст. 38 ФЗ «Об образовании в РФ»: школа вправе устанавливать требования к одежде, но не обязана — если требований нет, обучающиеся выбирают одежду сами.',
+      reqTitle: 'Требований к одежде нет',
+      reqList: [],
+      isCorrect: () => true,
+    },
+    {
+      caption: 'Регион, где учится Соня, утвердил типовые требования к одежде обучающихся — государственным и муниципальным школам рекомендован деловой стиль. Соберите Соню в соответствии с этим стилем.',
+      footnote: 'ч. 2 ст. 38 ФЗ «Об образовании в РФ»: государственные и муниципальные школы устанавливают требования в соответствии с типовыми требованиями, которые утверждает регион.',
+      reqTitle: 'Рекомендован стиль:',
+      reqList: [
+        'деловой стиль одежды',
+      ],
+      isCorrect: (id) => id === 'business',
+    },
+    {
+      caption: 'Школа номер сто пятьдесят один установила требования к одежде обучающихся. Повседневная форма: брюки или юбка бордового цвета, белая рубашка или блуза, кардиган или жилет бордового цвета. Соберите Соню в соответствии с этими требованиями.',
+      footnote: 'ч. 1 ст. 38 ФЗ «Об образовании в РФ»: конкретные детали — цвет, фасон — школа прописывает в своём локальном акте.',
+      reqTitle: 'Требования к одежде:',
+      reqList: [
+        'брюки или юбка — бордового цвета',
+        'рубашка или блуза — белая',
+        'кардиган или жилет — бордового цвета',
+      ],
+      isCorrect: (id) => id === 'school',
+    },
+    {
+      caption: 'Соня зачислена в Лётное училище. Образцы формы, правила её ношения и нормы обеспечения обмундированием устанавливает учредитель училища. Соберите Соню только из выданного вещевого имущества.',
+      footnote: 'ч. 4–5 ст. 38 ФЗ «Об образовании в РФ»: для организаций, готовящих специалистов в области обороны, безопасности, морской и лётной подготовки, образцы формы и нормы обеспечения обмундированием устанавливает их учредитель.',
+      reqTitle: 'Требования к форме:',
+      reqList: [
+        'использовать только вещевое имущество, выданное училищем',
+      ],
+      isCorrect: (id) => id === 'formal',
+      issuedFor: 'formal',
+    },
+  ];
+
+  const grid = document.getElementById('closetGrid');
+  const girlImg = document.getElementById('girlImg');
+  const reqTitle = document.getElementById('reqTitle');
+  const reqList = document.getElementById('reqList');
+  const feedback = document.getElementById('feedback');
+  const levelLabel = document.getElementById('levelLabel');
+  const prevBtn = document.getElementById('prevLevel');
+  const nextBtn = document.getElementById('nextLevel');
+  const introOverlay = document.getElementById('introOverlay');
+  const introText = document.getElementById('introText');
+  const introFootnote = document.getElementById('introFootnote');
+  const introOk = document.getElementById('introOk');
+  const finalOverlay = document.getElementById('finalOverlay');
+  const restartBtn = document.getElementById('restartGame');
+  const startOverlay = document.getElementById('startOverlay');
+  const startBtn = document.getElementById('startBtn');
+
+  const TOTAL = levels.length;
+  let currentLevel = 0; // 0..TOTAL-1 — обычные уровни; TOTAL — финальный экран
+  let issuedBadge = null;
+
+  outfits.forEach(outfit => {
+    const btn = document.createElement('div');
+    btn.className = 'closet-item';
+    btn.title = outfit.name;
+
+    const img = document.createElement('img');
+    img.src = outfit.thumb;
+    img.alt = outfit.name;
+    btn.appendChild(img);
+
+    if (outfit.id === 'formal') {
+      issuedBadge = document.createElement('div');
+      issuedBadge.className = 'issued-badge';
+      issuedBadge.textContent = 'Выдано училищем';
+      btn.appendChild(issuedBadge);
+    }
+
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.closet-item').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+
+      girlImg.classList.add('fading');
+      setTimeout(() => {
+        girlImg.src = outfit.worn;
+        girlImg.classList.remove('fading');
+      }, 150);
+
+      const ok = levels[currentLevel].isCorrect(outfit.id);
+      feedback.textContent = ok ? 'Верно, это подходит!' : 'Это не соответствует требованиям.';
+      feedback.className = 'feedback ' + (ok ? 'correct' : 'wrong');
+    });
+
+    grid.appendChild(btn);
+  });
+
+  function renderLevel() {
+    if (currentLevel === TOTAL) {
+      renderFinal();
+      return;
+    }
+
+    finalOverlay.classList.add('hidden');
+
+    const lvl = levels[currentLevel];
+    introText.textContent = lvl.caption;
+    introFootnote.textContent = lvl.footnote;
+    introOverlay.classList.remove('hidden');
+    reqTitle.textContent = lvl.reqTitle;
+
+    reqList.innerHTML = '';
+    if (lvl.reqList.length === 0) {
+      reqList.className = 'req-list none';
+    } else {
+      reqList.className = 'req-list';
+      lvl.reqList.forEach(text => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        reqList.appendChild(li);
+      });
+    }
+
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+    levelLabel.textContent = `Уровень ${currentLevel + 1} из ${TOTAL}`;
+
+    document.querySelectorAll('.closet-item').forEach(el => el.classList.remove('active'));
+    girlImg.classList.add('fading');
+    setTimeout(() => {
+      girlImg.src = 'девочка_crop.png';
+      girlImg.classList.remove('fading');
+    }, 150);
+
+    if (issuedBadge) {
+      issuedBadge.style.display = lvl.issuedFor === 'formal' ? 'block' : 'none';
+    }
+  }
+
+  function renderFinal() {
+    introOverlay.classList.add('hidden');
+    finalOverlay.classList.remove('hidden');
+    levelLabel.textContent = 'Итог';
+    reqTitle.textContent = '';
+    reqList.innerHTML = '';
+    reqList.className = 'req-list';
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+    document.querySelectorAll('.closet-item').forEach(el => el.classList.remove('active'));
+    if (issuedBadge) issuedBadge.style.display = 'none';
+  }
+
+  prevBtn.addEventListener('click', () => {
+    currentLevel = (currentLevel - 1 + (TOTAL + 1)) % (TOTAL + 1);
+    renderLevel();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    currentLevel = (currentLevel + 1) % (TOTAL + 1);
+    renderLevel();
+  });
+
+  introOk.addEventListener('click', () => {
+    introOverlay.classList.add('hidden');
+  });
+
+  restartBtn.addEventListener('click', () => {
+    currentLevel = 0;
+    renderLevel();
+  });
+
+  startBtn.addEventListener('click', () => {
+    startOverlay.classList.add('hidden');
+    renderLevel();
+  });
+</script>
+</body>
+</html>
